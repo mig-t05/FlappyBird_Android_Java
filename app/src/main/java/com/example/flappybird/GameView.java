@@ -1,6 +1,5 @@
 package com.example.flappybird;
 
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -8,25 +7,22 @@ import android.graphics.Paint;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import java.util.ArrayList;
-import java.util.List;
 
 public class GameView extends SurfaceView implements Runnable {
 
-    // --- QUẢN LÝ LUỒNG (THREAD) & TRẠNG THÁI ---
+    // --- TV1: QUẢN LÝ HỆ THỐNG ---
     private Thread thread;
     private boolean isPlaying;
     private SurfaceHolder holder;
     private int screenX, screenY;
-
-    // Trạng thái Game
     public boolean isGameOver = false;
-    private Paint textPaint; // Để TV2 vẽ chữ Score/GameOver
+    private Paint scorePaint;
 
-    // --- ĐỐI TƯỢNG TỪ CÁC THÀNH VIÊN KHÁC ---
-    private Bird bird;              // TV3 phụ trách class này
-    private List<Pipe> pipes;       // TV4 phụ trách class này
-    private SoundManager soundManager; // TV5 phụ trách class này
+    // --- CÁC THÀNH PHẦN ĐỘC LẬP ---
+    private BitmapBank bitmapBank;   // TV2 phụ trách
+    private Bird bird;              // TV3 phụ trách
+    private PipeManager pipeManager;// TV4 phụ trách
+    private GameSystems systems;     // TV5 phụ trách
 
     public GameView(Context context, int screenX, int screenY) {
         super(context);
@@ -34,92 +30,92 @@ public class GameView extends SurfaceView implements Runnable {
         this.screenX = screenX;
         this.screenY = screenY;
 
-        // 1. Khởi tạo các đối tượng (Khi TV3, TV4, TV5 đã xong class của họ)
-        // bird = new Bird(getResources(), screenX, screenY);
-        // pipes = new ArrayList<>();
-        // soundManager = new SoundManager(context);
+        // KHỞI TẠO KHUNG (Dù class rỗng vẫn chạy được)
+        bitmapBank = new BitmapBank(context);
+        systems = new GameSystems(context);
+        bird = new Bird(screenX, screenY);
+        pipeManager = new PipeManager(screenX, screenY);
 
-        // Khởi tạo Paint cho UI (TV2 có thể chỉnh sửa thêm)
-        textPaint = new Paint();
-        textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(100);
+        scorePaint = new Paint();
+        scorePaint.setColor(Color.WHITE);
+        scorePaint.setTextSize(100);
     }
 
     @Override
     public void run() {
         while (isPlaying) {
-            if (!isGameOver) {
-                update(); // Bước 1: Tính toán vị trí (Logic)
-            }
-            draw();       // Bước 2: Hiển thị lên màn hình (Graphics)
-            sleep();      // Bước 3: Kiểm soát tốc độ 60FPS
+            update(); // TV1 điều phối logic
+            draw();   // TV1 điều phối hiển thị
+            control();
         }
     }
 
-    // --- NHIỆM VỤ CỦA TV1: ĐIỀU PHỐI LOGIC ---
     private void update() {
-        // Gọi update của Bird (TV3 làm)
-        if (bird != null) {
-            bird.update();
+        if (isGameOver) return;
+
+        // --- MỖI THÀNH VIÊN TỰ TEST TRÊN NHÁNH CỦA MÌNH ---
+        if (bird != null) bird.update();               // TV3 test chim rơi
+        if (pipeManager != null) pipeManager.update(); // TV4 test ống chạy
+
+        // TV5 test va chạm
+        if (GameSystems.checkCollision(bird, pipeManager.getPipes())) {
+            isGameOver = true;
+            if (systems != null) systems.playHit();
         }
-
-        // Gọi update của Pipes (TV4 làm)
-        // Ví dụ: logic sinh ống mới và di chuyển ống
-
-        // Kiểm tra va chạm (TV5 làm hoặc TV1 điều phối)
-        // if (Collision.check(bird, pipes)) { isGameOver = true; }
     }
 
-    // --- NHIỆM VỤ CỦA TV2: HIỂN THỊ (RENDER) ---
     private void draw() {
+        if (holder.getSurface().isValid()) {
+            Canvas canvas = holder.lockCanvas();
 
+            // 1. TV2 TEST BACKGROUND
+            if (BitmapBank.getBackground() != null) {
+                canvas.drawBitmap(BitmapBank.getBackground(), 0, 0, null);
+            } else {
+                canvas.drawColor(Color.rgb(113, 197, 207)); // Màu nền tạm
+            }
+
+            // 2. TV4 TEST ỐNG
+            if (pipeManager != null) pipeManager.draw(canvas);
+
+            // 3. TV3 TEST CHIM
+            if (bird != null) bird.draw(canvas);
+
+            // 4. TV1 & TV2 TEST UI
+            canvas.drawText("Score: " + pipeManager.getScore(), 50, 150, scorePaint);
+            if (isGameOver) {
+                canvas.drawText("GAME OVER", screenX/4f, screenY/2f, scorePaint);
+            }
+
+            holder.unlockCanvasAndPost(canvas);
+        }
     }
 
-    // --- NHIỆM VỤ CỦA TV1: ĐIỀU KHIỂN ---
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             if (isGameOver) {
-                // Logic Reset game (TV1 làm)
                 restartGame();
             } else {
-                // Báo cho Bird nhảy lên (TV3 viết hàm jump())
-                if (bird != null) {
-                    bird.jump();
-                    // soundManager.playJumpSound(); (TV5 làm)
-                }
+                // TV3 TEST CẢM ỨNG NHẢY
+                if (bird != null) bird.jump();
+                // TV5 TEST ÂM THANH
+                if (systems != null) systems.playWing();
             }
         }
         return true;
     }
 
     private void restartGame() {
-        // Reset tọa độ chim, xóa danh sách ống...
+        bird = new Bird(screenX, screenY);
+        pipeManager = new PipeManager(screenX, screenY);
         isGameOver = false;
     }
 
-    private void sleep() {
-        try {
-            // Nghỉ 17ms để đạt ~60 khung hình/giây
-            Thread.sleep(17);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    private void control() {
+        try { Thread.sleep(17); } catch (InterruptedException e) {}
     }
 
-    // Quản lý vòng đời (TV1 đảm bảo game không chạy ngầm gây tốn pin)
-    public void resume() {
-        isPlaying = true;
-        thread = new Thread(this);
-        thread.start();
-    }
-
-    public void pause() {
-        try {
-            isPlaying = false;
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
+    public void resume() { isPlaying = true; thread = new Thread(this); thread.start(); }
+    public void pause() { isPlaying = false; try { thread.join(); } catch (Exception e) {} }
 }
