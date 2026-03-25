@@ -48,9 +48,16 @@ public class PipeManager {
         }
         public void update() { x -= 12; }
         public void draw(Canvas canvas, Paint p) {
-            p.setColor(Color.GREEN);
-            canvas.drawRect(getTopRect(), p);
-            canvas.drawRect(getBottomRect(), p);
+            // Vẽ ống trên:
+            // Tọa độ Y bắt đầu từ 0, kéo dài đến topY.
+            // Lưu ý: Nếu ảnh toppipe của bạn chưa quay ngược đầu, bạn có thể cần dùng scale để lật nó.
+            Rect topRect = new Rect(x, 0, x + width, topY);
+            canvas.drawBitmap(BitmapBank.getPipeTop(), null, topRect, null);
+
+            // Vẽ ống dưới:
+            // Tọa độ Y bắt đầu từ (topY + gap), kéo dài đến hết màn hình (screenY)
+            Rect bottomRect = new Rect(x, topY + gap, x + width, screenY);
+            canvas.drawBitmap(BitmapBank.getPipeBottom(), null, bottomRect, null);
         }
         public Rect getTopRect() { return new Rect(x, 0, x + width, topY); }
         public Rect getBottomRect() { return new Rect(x, topY + gap, x + width, screenY); }

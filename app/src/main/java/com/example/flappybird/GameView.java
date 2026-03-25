@@ -11,6 +11,8 @@ import android.view.SurfaceView;
 public class GameView extends SurfaceView implements Runnable {
 
     // --- TV1: QUẢN LÝ HỆ THỐNG ---
+    private boolean isStart = false;
+    private int gameState = Constants.STATE_MENU;
     private Thread thread;
     private boolean isPlaying;
     private SurfaceHolder holder;
@@ -51,16 +53,17 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     private void update() {
-        if (isGameOver) return;
+        if (isStart && !isGameOver) {
 
-        // --- MỖI THÀNH VIÊN TỰ TEST TRÊN NHÁNH CỦA MÌNH ---
-        if (bird != null) bird.update();               // TV3 test chim rơi
-        if (pipeManager != null) pipeManager.update(); // TV4 test ống chạy
+            // --- MỖI THÀNH VIÊN TỰ TEST TRÊN NHÁNH CỦA MÌNH ---
+            if (bird != null) bird.update();               // TV3 test chim rơi
+            if (pipeManager != null) pipeManager.update(); // TV4 test ống chạy
 
-        // TV5 test va chạm
-        if (GameSystems.checkCollision(bird, pipeManager.getPipes())) {
-            isGameOver = true;
-            if (systems != null) systems.playHit();
+            // TV5 test va chạm
+            if (GameSystems.checkCollision(bird, pipeManager.getPipes())) {
+                isGameOver = true;
+                if (systems != null) systems.playHit();
+            }
         }
     }
 
@@ -74,27 +77,58 @@ public class GameView extends SurfaceView implements Runnable {
             } else {
                 canvas.drawColor(Color.rgb(113, 197, 207)); // Màu nền tạm
             }
+            if (!isStart) {
+                // NẾU CHƯA BẮT ĐẦU: Vẽ Menu (isStart là biến boolean bạn tự đặt)
+                drawStartMenu(canvas);
 
-            // 2. TV4 TEST ỐNG
-            if (pipeManager != null) pipeManager.draw(canvas);
+            }else {
+                // 2. TV4 TEST ỐNG
+                if (pipeManager != null) pipeManager.draw(canvas);
 
-            // 3. TV3 TEST CHIM
-            if (bird != null) bird.draw(canvas);
+                // 3. TV3 TEST CHIM
+                if (bird != null) bird.draw(canvas);
 
-            // 4. TV1 & TV2 TEST UI
-            canvas.drawText("Score: " + pipeManager.getScore(), 50, 150, scorePaint);
-            if (isGameOver) {
-                canvas.drawText("GAME OVER", screenX/4f, screenY/2f, scorePaint);
+                // 4. TV1 & TV2 TEST UI
+                canvas.drawText("Score: " + pipeManager.getScore(), 50, 150, scorePaint);
+                if (isGameOver) {
+                    canvas.drawText("GAME OVER", screenX / 4f, screenY / 2f, scorePaint);
+                }
             }
+
 
             holder.unlockCanvasAndPost(canvas);
         }
+    }
+    private void drawStartMenu(Canvas canvas) {
+        Paint p = new Paint();
+        p.setColor(Color.WHITE);
+        p.setTextSize(100);
+        p.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("FLAPPY BIRD", Constants.SCREEN_WIDTH / 2, Constants.SCREEN_HEIGHT / 3, p);
+
+        p.setTextSize(60);
+        canvas.drawText("CHẠM ĐỂ BẮT ĐẦU", Constants.SCREEN_WIDTH / 2, Constants.SCREEN_HEIGHT / 2, p);
+    }
+
+    private void drawGameOverMenu(Canvas canvas) {
+        Paint p = new Paint();
+        p.setColor(Color.RED);
+        p.setTextSize(120);
+        p.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("GAME OVER", Constants.SCREEN_WIDTH / 2, Constants.SCREEN_HEIGHT / 3, p);
+
+        // Vẽ nút chơi lại đơn giản
+        p.setColor(Color.WHITE);
+        p.setTextSize(70);
+        canvas.drawText("BẤM ĐỂ CHƠI LẠI", Constants.SCREEN_WIDTH / 2, Constants.SCREEN_HEIGHT / 2, p);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            if (isGameOver) {
+            if (!isStart) {
+                isStart = true; // Menu sẽ biến mất ở lần vẽ tiếp theo
+            } else if (isGameOver) {
                 restartGame();
             } else {
                 // TV3 TEST CẢM ỨNG NHẢY
