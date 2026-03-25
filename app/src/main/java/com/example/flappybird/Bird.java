@@ -6,6 +6,10 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 
 public class Bird {
+
+    private static final int GRAVITY = 2;
+    private static final int JUMP_FORCE = -30;
+
     private int x, y, velocity;
     private int width = 100, height = 100;
 
@@ -16,23 +20,32 @@ public class Bird {
     }
 
     public void update() {
-        // TV3 viết logic rơi tự do: velocity += Constants.GRAVITY; y += velocity;
+        velocity += GRAVITY;
+        y += velocity;
     }
 
     public void jump() {
-        // TV3 viết logic nhảy: velocity = -30;
+        velocity = JUMP_FORCE;
     }
 
     public void draw(Canvas canvas) {
         if (BitmapBank.getBird() != null) {
+            this.width = BitmapBank.getBird().getWidth();
+            this.height = BitmapBank.getBird().getHeight();
+
             canvas.drawBitmap(BitmapBank.getBird(), x, y, null);
         } else {
-            // Vẽ hình vuông tạm thời để test
-            Paint p = new Paint(); p.setColor(Color.RED);
+            Paint p = new Paint();
+            p.setColor(Color.RED);
             canvas.drawRect(getRect(), p);
         }
     }
 
-    public Rect getRect() { return new Rect(x, y, x + width, y + height); }
-    public int getY() { return y; }
+    public Rect getRect() {
+        return new Rect(x, y, x + width, y + height);
+    }
+
+    public int getY() {
+        return y;
+    }
 }
