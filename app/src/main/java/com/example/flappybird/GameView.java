@@ -24,7 +24,7 @@ public class GameView extends SurfaceView implements Runnable {
     private BitmapBank bitmapBank;   // TV2 phụ trách
     private Bird bird;              // TV3 phụ trách
     private PipeManager pipeManager;// TV4 phụ trách
-    private GameSystems systems;     // TV5 phụ trách
+    private SoundManager systems;     // TV5 phụ trách
 
     public GameView(Context context, int screenX, int screenY) {
         super(context);
@@ -34,7 +34,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         // KHỞI TẠO KHUNG (Dù class rỗng vẫn chạy được)
         bitmapBank = new BitmapBank(context);
-        systems = new GameSystems(context);
+        systems = new SoundManager(context);
         bird = new Bird(screenX, screenY);
         pipeManager = new PipeManager(screenX, screenY);
 
@@ -60,7 +60,7 @@ public class GameView extends SurfaceView implements Runnable {
             if (pipeManager != null) pipeManager.update(); // TV4 test ống chạy
 
             // TV5 test va chạm
-            if (GameSystems.checkCollision(bird, pipeManager.getPipes())) {
+            if (SoundManager.checkCollision(bird, pipeManager.getPipes())) {
                 isGameOver = true;
                 if (systems != null) systems.playHit();
             }
@@ -144,6 +144,7 @@ public class GameView extends SurfaceView implements Runnable {
         bird = new Bird(screenX, screenY);
         pipeManager = new PipeManager(screenX, screenY);
         isGameOver = false;
+
     }
 
     private void control() {
