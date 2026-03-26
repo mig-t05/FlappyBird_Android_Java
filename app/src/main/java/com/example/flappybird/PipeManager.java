@@ -10,43 +10,90 @@ import java.util.Random;
 
 public class PipeManager {
     private List<Pipe> pipes = new ArrayList<>();
-    private int screenX, screenY, score = 0;
-    private long lastPipeTime;
+    private int screenX, screenY;
+    private int pipeSpacing = 600; // Khoảng cách giữa 2 cột ống liên tiếp
+    private int score = 0;
 
     public PipeManager(int screenX, int screenY) {
-        this.screenX = screenX; this.screenY = screenY;
-        spawnPipe();
-    }
+        this.screenX = screenX;
+        this.screenY = screenY;
 
-    private void spawnPipe() {
-        pipes.add(new Pipe(screenX));
-        lastPipeTime = System.currentTimeMillis();
-    }
-
-    public void update() {
-        if (System.currentTimeMillis() - lastPipeTime > 2500) spawnPipe();
-        for (int i = pipes.size() - 1; i >= 0; i--) {
-            pipes.get(i).update();
-            if (pipes.get(i).x + 200 < 0) { pipes.remove(i); score++; }
+        // BƯỚC TỐI ƯU 1: Khởi tạo sẵn 3 ống ngay từ đầu, không dùng timer nữa
+        for (int i = 0; i < 3; i++) {
+            // Xếp 3 ống nối đuôi nhau ra phía ngoài màn hình bên phải
+            pipes.add(new Pipe(screenX + i * pipeSpacing));
         }
     }
 
+    public void update() {
+        for (int i = 0; i < pipes.size(); i++) {
+            Pipe pipe = pipes.get(i);
+            pipe.update();
+
+            // BƯỚC TỐI ƯU 2: TÁI CHẾ ỐNG (Thay vì xóa đi tạo lại)
+            if (pipe.x + pipe.width < 0) {
+                // Tìm xem hiện tại ống nào đang nằm xa nhất về bên phải
+                int max_x = 0;
+                for (Pipe p : pipes) {
+                    if (p.x > max_x) {
+                        max_x = p.x;
+                    }
+                }
+
+                // Di chuyển cái ống vừa khuất màn hình ra sau lưng cái ống xa nhất đó
+                pipe.x = max_x + pipeSpacing;
+                pipe.randomizeHeight(); // Sinh lại khe hở mới
+                pipe.isPassed = false;  // Reset cờ tính điểm cho lần lặp sau
+            }
+
+            // HỖ TRỢ TV5: Logic tính điểm đơn giản
+            // Giả sử chim bay ở khoảng 1/3 màn hình, khi ống vượt qua tọa độ này thì cộng điểm
+            if (!pipe.isPassed && pipe.x + pipe.width < screenX / 3) {
+                score++;
+                pipe.isPassed = true;
+            }
+        }
+    }
+
+    // --- HÀM DRAW NÀY ĐỂ BẠN CHẠY TEST TRƯỚC (TV2 SẼ SỬA LẠI ĐỂ VẼ ẢNH SAU) ---
     public void draw(Canvas canvas) {
         Paint p = new Paint();
-        for (Pipe pipe : pipes) pipe.draw(canvas, p);
+        for (Pipe pipe : pipes) {
+            pipe.draw(canvas, p);
+        }
     }
 
     public List<Pipe> getPipes() { return pipes; }
     public int getScore() { return score; }
 
-    // --- Lớp Pipe nội bộ ---
+    // ==========================================
+    // --- LỚP PIPE NỘI BỘ (Inner Class) ---
+    // ==========================================
     public class Pipe {
-        public int x, topY, width = 200, gap = 450;
+        public int x, topY, width = 180, gap = 450;
+        public boolean isPassed = false; // Cờ đánh dấu chim đã bay qua chưa (Cho TV5)
+
         public Pipe(int startX) {
             this.x = startX;
-            this.topY = new Random().nextInt(screenY / 2) + 200;
+            randomizeHeight();
         }
-        public void update() { x -= 12; }
+
+        // Tách hàm random ra để dùng lại khi tái chế
+        public void randomizeHeight() {
+            int minHeight = 200; // Ống không được ngắn hơn 200px
+            int maxHeight = screenY - minHeight - gap;
+
+            if (maxHeight > minHeight) {
+                this.topY = new Random().nextInt(maxHeight - minHeight) + minHeight;
+            } else {
+                this.topY = minHeight; // Tránh lỗi crash nếu màn hình quá nhỏ
+            }
+        }
+
+        public void update() {
+            x -= 12; // Tốc độ di chuyển
+        }
+
         public void draw(Canvas canvas, Paint p) {
             // Vẽ ống trên:
             // Tọa độ Y bắt đầu từ 0, kéo dài đến topY.
@@ -59,6 +106,7 @@ public class PipeManager {
             Rect bottomRect = new Rect(x, topY + gap, x + width, screenY);
             canvas.drawBitmap(BitmapBank.getPipeBottom(), null, bottomRect, null);
         }
+
         public Rect getTopRect() { return new Rect(x, 0, x + width, topY); }
         public Rect getBottomRect() { return new Rect(x, topY + gap, x + width, screenY); }
     }
