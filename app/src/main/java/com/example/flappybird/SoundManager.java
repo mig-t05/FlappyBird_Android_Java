@@ -6,6 +6,7 @@ import android.media.AudioManager;
 import android.media.SoundPool;
 import android.os.Build;
 import java.util.List;
+import android.graphics.Rect;
 
 public class SoundManager {
 
@@ -53,12 +54,23 @@ public class SoundManager {
         }
     }
 
-    public static boolean checkCollision(Bird bird, List<Pipe> pipes) {
-        for (Pipe pipe : pipes) {
-            if (bird.getBounds().intersect(pipe.getBounds())) {
+    public static boolean checkCollision(Bird bird, List<PipeManager.Pipe> pipes) {
+        if (bird == null || pipes == null) return false;
+
+        Rect birdRect = bird.getRect();
+        for (PipeManager.Pipe pipe : pipes) {
+            // Check va chạm với ống TRÊN hoặc ống DƯỚI
+            if (Rect.intersects(birdRect, pipe.getTopRect()) ||
+                    Rect.intersects(birdRect, pipe.getBottomRect())) {
                 return true;
             }
         }
+
+        // Check nếu chim rơi xuống đất hoặc bay quá trời
+        if (bird.getY() <= 0 || bird.getY() >= Constants.SCREEN_HEIGHT) {
+            return true;
+        }
+
         return false;
     }
     
